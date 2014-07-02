@@ -96,12 +96,18 @@ generateFlatFile flags =
               ,)
               (map getOccString names)
 
+openIndex :: String -> IOMode
+openIndex p m = do
+    h <- openFile p m
+    hSetEncoding h utf8
+    return h
+
 -- | Save the index to file.
 saveIndex :: Index -> IO ()
 saveIndex i =
   do d <- getTemporaryDirectory
      L.writeFile (d </> indexFilename) mempty
-     h <- openFile (d </> indexFilename) AppendMode
+     h <- openIndex (d </> indexFilename) AppendMode
      forM_ (M.toList i)
            (\(ident,modules) -> T.hPutStrLn h (ident <> " " <> modules))
      hClose h
@@ -119,7 +125,7 @@ lookupInIndex
   -> IO (Maybe (HashMap Text [Text]))
 lookupInIndex (T.encodeUtf8 -> ident) =
   do d <- getTemporaryDirectory
-     h <- openFile (d </> indexFilename) ReadMode
+     h <- openIndex (d </> indexFilename) ReadMode
      E.catch
          (fix (\loop ->
                  do line <- S.hGetLine h
